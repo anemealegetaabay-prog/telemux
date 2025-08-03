@@ -1,0 +1,9 @@
+build/
+build_test/
+build_fuzz/
+build_verify/
+*.o
+*.a
+*.out
+.cache/
+compile_commands.json
