@@ -1,0 +1,15 @@
+if(NOT DEFINED LIB_FUZZING_ENGINE)
+  set(LIB_FUZZING_ENGINE "-fsanitize=fuzzer")
+endif()
+
+function(add_telemux_fuzzer name)
+  add_executable(${name} ${name}.cc)
+  target_link_libraries(${name} PRIVATE telemux)
+  target_link_options(${name} PRIVATE ${LIB_FUZZING_ENGINE})
+endfunction()
+
+add_telemux_fuzzer(transform_vm_fuzzer)
+add_telemux_fuzzer(frame_fuzzer)
+add_telemux_fuzzer(section_fuzzer)
+add_telemux_fuzzer(session_fuzzer)
+add_telemux_fuzzer(plane_pipeline_fuzzer)
