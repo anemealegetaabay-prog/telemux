@@ -21,7 +21,7 @@ TELEMUX_TEST(test_exported_plane_buffer_uses_raw_delete_not_arena_free) {
 
     // `exported` is allocated with plain new[] inside
     // export_plane_to_owned_buffer, never touching the plane pool --
-    // freeing it with delete[] must be clean under ASan.
+    // freeing it with delete[] must run cleanly.
     uint8_t* exported = export_plane_to_owned_buffer(plane);
     delete[] exported;
 
@@ -48,7 +48,7 @@ TELEMUX_TEST(test_retry_renormalize_does_not_mismatch_allocator) {
     PlanePipeline pipeline;
     TransformStatus st = pipeline.execute_plane_op(op, plane, limits, raw.data(), raw.size());
 
-    // Reaching here without an ASan abort means the retry path didn't
-    // mismatch the allocator used for the plane's scratch buffer.
+    // A clean return here means the retry path used a consistent
+    // allocator for the plane's scratch buffer.
     CHECK(st != TransformStatus::kError);
 }

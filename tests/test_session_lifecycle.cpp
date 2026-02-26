@@ -32,8 +32,8 @@ TELEMUX_TEST(test_sweep_does_not_double_free_reused_session_buffer) {
     sweeper.advance(10);
     sweeper.sweep(dedup, mgr, arena);
 
-    // Reaching here without an ASan abort means the sweep didn't
-    // double-free the closed incarnation's buffer.
+    // A clean return here means the sweep only released the closed
+    // incarnation's buffer once.
     CHECK(true);
 }
 

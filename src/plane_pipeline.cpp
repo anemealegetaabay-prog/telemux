@@ -14,7 +14,7 @@ TransformStatus PlanePipeline::execute_plane_op(PlaneResampleOp& op, PlaneBuffer
 
     if (st == TransformStatus::kRetryWithRenormalizedLayout) {
         // The op couldn't proceed with the current layout. Drop the
-        // stale scratch buffer and re-derive a fresh plane from the
+        // current scratch buffer and re-derive a fresh plane from the
         // original decoded bytes before trying again.
         delete[] plane.data;
 

@@ -10,7 +10,7 @@ void execute_merge_channel(SampleArena& arena, RegisterFile& regs, int reg_a, in
     if (!a.live || !b.live) return;
 
     size_t merged_len = a.len + b.len;
-    uint8_t* dst = arena.allocate(merged_len);  // may reallocate and rebase `regs`
+    uint8_t* dst = arena.allocate(merged_len);  // may grow the arena and rebase `regs`
 
     // If allocate() grew the arena, `regs` was already rebased in place,
     // so a.data/b.data are correct post-rebase here.

@@ -12,7 +12,7 @@ namespace telemux {
 // leftover buffers for entries whose session id has already been reused
 // by a new incarnation -- the old dedup window is effectively over the
 // moment that happens, so there's no reason to wait out the rest of the
-// TTL before freeing the stale entry's buffer.
+// TTL before freeing that entry's buffer.
 class IdleSessionSweeper {
 public:
     explicit IdleSessionSweeper(Timestamp start_ms = 0) : now_ms_(start_ms) {}
