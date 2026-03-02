@@ -22,7 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     // Every id this input has touched, so we can close whatever's still
     // open before returning -- otherwise a session left open at the end
     // of one input reads as a leak to LeakSanitizer even though it's
-    // ordinary in-progress library state, not an actual bug.
+    // ordinary in-progress library state.
     std::vector<SessionId> touched_ids;
 
     size_t i = 0;
