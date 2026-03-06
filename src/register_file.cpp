@@ -14,12 +14,4 @@ void RegisterFile::clear(int index) {
     regs[index].live = false;
 }
 
-void RegisterFile::rebase(ptrdiff_t delta) {
-    for (auto& r : regs) {
-        if (r.live && r.data != nullptr) {
-            r.data += delta;
-        }
-    }
-}
-
 }  // namespace telemux

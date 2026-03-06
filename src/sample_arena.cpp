@@ -24,7 +24,12 @@ void SampleArena::grow(size_t min_additional) {
 
     uint8_t* new_base = storage_.data();
     if (new_base != old_base && bound_regs_ != nullptr) {
-        bound_regs_->rebase(new_base - old_base);
+        ptrdiff_t delta = new_base - old_base;
+        for (auto& r : bound_regs_->regs) {
+            if (r.live && r.data != nullptr) {
+                r.data += delta;
+            }
+        }
     }
 }
 

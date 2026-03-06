@@ -12,8 +12,8 @@ namespace telemux {
 // handed out by allocate() alias directly into storage_ so register ops
 // can operate on them without copying. When the arena needs more room
 // than is currently reserved, the backing store is reallocated and moves
-// to a new address -- allocate() rebases the bound RegisterFile so its
-// live pointers keep pointing at the right bytes.
+// to a new address -- allocate() walks the bound RegisterFile and shifts
+// its live pointers so they keep pointing at the right bytes.
 class SampleArena {
 public:
     explicit SampleArena(size_t initial_bytes);
