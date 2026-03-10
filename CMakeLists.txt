@@ -30,6 +30,7 @@ set(TELEMUX_SOURCES
   src/sample_arena.cpp
   src/register_file.cpp
   src/undo_history.cpp
+  src/peek_cache.cpp
   src/transform_ops_merge.cpp
   src/transform_ops_filter.cpp
   src/transform_vm.cpp
