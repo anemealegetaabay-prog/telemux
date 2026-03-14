@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "telemux/peek_cache.h"
 #include "telemux/register_file.h"
 #include "telemux/sample_arena.h"
 #include "telemux/undo_history.h"
@@ -15,6 +16,8 @@ enum class Opcode : uint8_t {
     kMergeChannel = 2,
     kSnapshot = 3,
     kRollback = 4,
+    kPeek = 5,
+    kRepeatPeek = 6,
 };
 
 struct VMInstruction {
@@ -42,10 +45,13 @@ public:
 private:
     void execute_snapshot(int slot, int reg_index);
     void execute_rollback(int slot);
+    void execute_peek(int reg_index);
+    void execute_repeat_peek(int dst_reg);
 
     SampleArena& arena_;
     RegisterFile& regs_;
     UndoRegisterFile& undo_;
+    PeekCache peek_;
 };
 
 }  // namespace telemux

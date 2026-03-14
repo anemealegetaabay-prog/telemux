@@ -28,7 +28,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     size_t i = 0;
     while (i + 9 <= size) {
         VMInstruction instr;
-        instr.op = static_cast<Opcode>(data[i] % 5);
+        instr.op = static_cast<Opcode>(data[i] % 7);
         instr.reg_a = data[i + 1] % kNumRegisters;
         instr.reg_b = data[i + 2] % kNumRegisters;
         instr.reg_dst = data[i + 3] % kNumRegisters;

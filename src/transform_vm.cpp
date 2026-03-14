@@ -32,6 +32,12 @@ void TransformVM::execute(const std::vector<VMInstruction>& program) {
             case Opcode::kRollback:
                 execute_rollback(instr.slot);
                 break;
+            case Opcode::kPeek:
+                execute_peek(instr.reg_a);
+                break;
+            case Opcode::kRepeatPeek:
+                execute_repeat_peek(instr.reg_dst);
+                break;
         }
     }
 }
@@ -52,6 +58,24 @@ void TransformVM::execute_rollback(int slot) {
     if (!r.live || r.len < u.len) return;
     // Restore the register's bytes to what they were at snapshot time.
     std::memcpy(r.data, u.data, u.len);
+}
+
+void TransformVM::execute_peek(int reg_index) {
+    const Register& r = regs_.regs[reg_index];
+    if (!r.live) return;
+    // Zero-copy, same rationale as SNAPSHOT: a program may PEEK the same
+    // register many times while deciding what to do next.
+    peek_.record(r.data, r.len);
+}
+
+void TransformVM::execute_repeat_peek(int dst_reg) {
+    const PeekEntry& p = peek_.entry();
+    if (!p.live) return;
+    Register& r = regs_.regs[dst_reg];
+    if (!r.live || r.len < p.len) return;
+    // Re-emit the previously peeked bytes without touching the source
+    // register again.
+    std::memcpy(r.data, p.data, p.len);
 }
 
 }  // namespace telemux
