@@ -64,6 +64,62 @@ TELEMUX_TEST(test_rollback_restores_after_unrelated_merge_growth) {
     CHECK(std::memcmp(regs.regs[0].data, seed, 16) == 0);
 }
 
+TELEMUX_TEST(test_repeat_peek_survives_unrelated_merge_growth) {
+    SampleArena arena(64);  // small, so a handful of merges forces growth
+    RegisterFile regs;
+    UndoRegisterFile undo;
+    TransformVM vm(arena, regs, undo);
+
+    uint8_t seed[16];
+    for (int i = 0; i < 16; ++i) seed[i] = static_cast<uint8_t>(0x40 + i);
+    uint8_t* p0 = arena.allocate(16);
+    std::memcpy(p0, seed, 16);
+    regs.set(0, p0, 16);
+
+    uint8_t* p1 = arena.allocate(16);
+    std::memset(p1, 0, 16);
+    regs.set(1, p1, 16);
+
+    uint8_t* p5 = arena.allocate(8);
+    std::memset(p5, 0xCC, 8);
+    regs.set(5, p5, 8);
+    uint8_t* p6 = arena.allocate(8);
+    std::memset(p6, 0xDD, 8);
+    regs.set(6, p6, 8);
+
+    std::vector<VMInstruction> program;
+    VMInstruction peek;
+    peek.op = Opcode::kPeek;
+    peek.reg_a = 0;
+    program.push_back(peek);
+
+    for (int i = 0; i < 20; ++i) {
+        VMInstruction merge;
+        merge.op = Opcode::kMergeChannel;
+        merge.reg_a = 5;
+        merge.reg_b = 6;
+        merge.reg_dst = 7;
+        program.push_back(merge);
+
+        VMInstruction fold_back;
+        fold_back.op = Opcode::kMergeChannel;
+        fold_back.reg_a = 7;
+        fold_back.reg_b = 6;
+        fold_back.reg_dst = 5;
+        program.push_back(fold_back);
+    }
+
+    VMInstruction repeat_peek;
+    repeat_peek.op = Opcode::kRepeatPeek;
+    repeat_peek.reg_dst = 1;
+    program.push_back(repeat_peek);
+
+    vm.execute(program);
+
+    CHECK(regs.regs[1].live);
+    CHECK(std::memcmp(regs.regs[1].data, seed, 16) == 0);
+}
+
 TELEMUX_TEST(test_snapshot_zero_extra_allocation) {
     SampleArena arena(4096);
     RegisterFile regs;
