@@ -2,10 +2,13 @@
 
 namespace telemux {
 
-void ReassemblyTracker::begin_consolidation(uint16_t session_id, uint32_t leading_offset,
-                                             uint32_t leading_length, uint32_t segments_total) {
-    pending_[session_id] = PendingConsolidation{session_id, leading_offset, leading_length,
-                                                 segments_total, true};
+void ReassemblyTracker::add_fragment(uint16_t session_id, uint32_t offset, uint32_t length,
+                                      uint32_t segments_total) {
+    PendingConsolidation& pc = pending_[session_id];
+    pc.session_id = session_id;
+    pc.segments_total = segments_total;
+    pc.active = true;
+    pc.fragments.push_back(FragmentRef{offset, length});
 }
 
 bool ReassemblyTracker::has_pending(uint16_t session_id) const {
@@ -15,20 +18,25 @@ bool ReassemblyTracker::has_pending(uint16_t session_id) const {
 
 std::vector<uint8_t> ReassemblyTracker::finish_consolidation(uint16_t session_id,
                                                               const RecvArena& arena,
-                                                              const uint8_t* trailing_fragment,
-                                                              uint32_t trailing_length) {
+                                                              const uint8_t* final_fragment,
+                                                              uint32_t final_length) {
     auto it = pending_.find(session_id);
     if (it == pending_.end()) return {};
     const PendingConsolidation& pc = it->second;
 
-    std::vector<uint8_t> out;
-    out.reserve(pc.leading_length + trailing_length);
+    size_t total = final_length;
+    for (const auto& frag : pc.fragments) total += frag.length;
 
-    // The leading fragment's bytes live in the receive arena at the offset
-    // recorded when it first arrived.
-    const uint8_t* leading = arena.data() + pc.leading_offset;
-    out.insert(out.end(), leading, leading + pc.leading_length);
-    out.insert(out.end(), trailing_fragment, trailing_fragment + trailing_length);
+    std::vector<uint8_t> out;
+    out.reserve(total);
+
+    // Each earlier fragment's bytes live in the receive arena at the
+    // offset recorded when it first arrived.
+    for (const auto& frag : pc.fragments) {
+        const uint8_t* p = arena.data() + frag.offset;
+        out.insert(out.end(), p, p + frag.length);
+    }
+    out.insert(out.end(), final_fragment, final_fragment + final_length);
 
     pending_.erase(it);
     return out;

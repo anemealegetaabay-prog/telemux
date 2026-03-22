@@ -33,10 +33,12 @@ Result<std::vector<uint8_t>> FrameParser::feed_frame(const uint8_t* data, size_t
 
     std::vector<uint8_t> result;
     if (fragmented && !final_frag) {
-        // Leading fragment of a multi-part message: remember where its
-        // bytes landed so the final fragment can be stitched to them.
-        // Its arena segment is intentionally left unconsumed until then.
-        reassembly_.begin_consolidation(session_id, offset, payload_length, total_fragments);
+        // A non-final fragment of a multi-part message: remember where
+        // its bytes landed so the final fragment can be stitched to them,
+        // alongside any earlier fragments already recorded for this
+        // session. Its arena segment is intentionally left unconsumed
+        // until the message completes.
+        reassembly_.add_fragment(session_id, offset, payload_length, total_fragments);
     } else if (reassembly_.has_pending(session_id)) {
         result = reassembly_.finish_consolidation(session_id, arena_, payload, payload_length);
         arena_.mark_consumed(offset);
