@@ -86,6 +86,67 @@ TELEMUX_TEST(test_consolidation_survives_intervening_compaction) {
     CHECK(r2.value() == expected);
 }
 
+TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
+    TelemuxConfig config;
+    config.recv_arena_compact_threshold_bytes = 256;
+    RecvArena arena(64);
+    ReassemblyTracker reassembly;
+    FrameParser parser(arena, reassembly, config);
+
+    uint8_t frag_flags = static_cast<uint8_t>(FrameFlags::kFragmented);
+    uint8_t final_flags = frag_flags | static_cast<uint8_t>(FrameFlags::kFragmentFinal);
+
+    // A decoy session that stays partially assembled for the whole test,
+    // ahead of session 1, so compaction has something to reorder against.
+    std::vector<uint8_t> decoy_leading = {'D', 'E', 'C', 'O', 'Y', '!'};
+    auto decoy_frame = build_frame(/*session=*/2, frag_flags, decoy_leading, 2);
+    CHECK(parser.feed_frame(decoy_frame.data(), decoy_frame.size()).ok());
+
+    std::vector<uint8_t> spacer(40, 0xEE);
+    auto spacer_frame = build_frame(/*session=*/3, 0, spacer);
+    CHECK(parser.feed_frame(spacer_frame.data(), spacer_frame.size()).ok());
+
+    // Three non-final fragments for session 1, each separated by enough
+    // unrelated traffic to force at least one compaction between them --
+    // every one of their cached offsets needs to be independently kept
+    // correct, not just the first.
+    std::vector<uint8_t> part1 = {'A', 'A', 'A', 'A'};
+    auto f1 = build_frame(1, frag_flags, part1, 4);
+    CHECK(parser.feed_frame(f1.data(), f1.size()).ok());
+
+    for (int i = 0; i < 60; ++i) {
+        std::vector<uint8_t> filler(60, static_cast<uint8_t>(i));
+        auto frame = build_frame(static_cast<uint16_t>(100 + i), 0, filler);
+        CHECK(parser.feed_frame(frame.data(), frame.size()).ok());
+    }
+
+    std::vector<uint8_t> part2 = {'B', 'B', 'B', 'B'};
+    auto f2 = build_frame(1, frag_flags, part2, 4);
+    CHECK(parser.feed_frame(f2.data(), f2.size()).ok());
+
+    for (int i = 0; i < 60; ++i) {
+        std::vector<uint8_t> filler(60, static_cast<uint8_t>(i));
+        auto frame = build_frame(static_cast<uint16_t>(700 + i), 0, filler);
+        CHECK(parser.feed_frame(frame.data(), frame.size()).ok());
+    }
+
+    // One more, larger filler right before the final fragment to force a
+    // compaction with nothing left uncompacted in between.
+    std::vector<uint8_t> big_filler(300, 0x77);
+    auto bf = build_frame(9999, 0, big_filler);
+    CHECK(parser.feed_frame(bf.data(), bf.size()).ok());
+
+    std::vector<uint8_t> part3 = {'C', 'C', 'C', 'C'};
+    auto f3 = build_frame(1, final_flags, part3, 4);
+    auto r3 = parser.feed_frame(f3.data(), f3.size());
+    CHECK(r3.ok());
+
+    std::vector<uint8_t> expected = part1;
+    expected.insert(expected.end(), part2.begin(), part2.end());
+    expected.insert(expected.end(), part3.begin(), part3.end());
+    CHECK(r3.value() == expected);
+}
+
 TELEMUX_TEST(test_compaction_still_reclaims_during_long_lived_partial_message) {
     TelemuxConfig config;
     config.recv_arena_compact_threshold_bytes = 256;
