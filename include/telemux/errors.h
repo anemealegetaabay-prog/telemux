@@ -12,6 +12,7 @@ enum class ErrorCode : uint32_t {
     kUnsupportedVersion,
     kSectionExceedsParentBudget,
     kNestTooDeep,
+    kReservedSectionTag,
     kSessionUnknown,
     kSessionIdSpaceExhausted,
     kFrameTooLarge,

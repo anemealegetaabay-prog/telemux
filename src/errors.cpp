@@ -10,6 +10,7 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kUnsupportedVersion: return "UnsupportedVersion";
         case ErrorCode::kSectionExceedsParentBudget: return "SectionExceedsParentBudget";
         case ErrorCode::kNestTooDeep: return "NestTooDeep";
+        case ErrorCode::kReservedSectionTag: return "ReservedSectionTag";
         case ErrorCode::kSessionUnknown: return "SessionUnknown";
         case ErrorCode::kSessionIdSpaceExhausted: return "SessionIdSpaceExhausted";
         case ErrorCode::kFrameTooLarge: return "FrameTooLarge";

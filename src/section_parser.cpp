@@ -26,14 +26,22 @@ uint32_t SectionParser::current_parent_budget() const {
 
 bool SectionParser::enter_nested_section(ByteCursor& cursor, const SectionHeader& hdr) {
     // Reserve the frame slot for this nested section before we've
-    // confirmed it fits its parent's remaining budget -- start_offset
-    // needs to be captured at the cursor position right after the header,
-    // and it's simplest to fill in the whole frame in one place.
+    // confirmed it's valid -- start_offset needs to be captured at the
+    // cursor position right after the header, and it's simplest to fill
+    // in the whole frame in one place.
     SectionFrame& frame = nest_stack_[nest_top_];
     frame.tag = hdr.tag;
     frame.declared_length = hdr.length;
     frame.start_offset = cursor.offset();
     nest_top_++;
+
+    // Tag 0 is reserved (never assigned to a real channel group) and
+    // shows up here only from a malformed or truncated encoder -- reject
+    // it rather than let it masquerade as a legitimate group.
+    if (hdr.tag == 0) {
+        record_error(ErrorCode::kReservedSectionTag);
+        return false;
+    }
 
     uint32_t parent_budget = current_parent_budget();
     if (hdr.length > parent_budget) {
