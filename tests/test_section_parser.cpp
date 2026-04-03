@@ -41,6 +41,21 @@ TELEMUX_TEST(test_failed_nested_section_does_not_leak_stack_depth) {
     CHECK(parser.debug_nest_depth() == depth_before);
 }
 
+TELEMUX_TEST(test_reserved_tag_section_does_not_leak_stack_depth) {
+    // A nested child using the reserved zero tag: enter_nested_section
+    // rejects it for a completely different reason than a budget
+    // overrun, and the nest depth must still be back to where it started.
+    std::vector<uint8_t> input;
+    append_section_header(input, /*tag=*/0, /*length=*/0, /*nested=*/true);
+
+    SectionParser parser;
+    ByteCursor cur(input.data(), input.size());
+
+    int depth_before = parser.debug_nest_depth();
+    parser.parse_top_level_section(cur, /*root_budget=*/64);
+    CHECK(parser.debug_nest_depth() == depth_before);
+}
+
 TELEMUX_TEST(test_nested_section_parse_is_allocation_free) {
     // A chain of validly-nested sections, deep enough to be a realistic
     // grouping hierarchy but comfortably under MAX_NEST_DEPTH.
