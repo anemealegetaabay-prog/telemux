@@ -5,24 +5,32 @@ namespace telemux {
 void IdleSessionSweeper::sweep(RecentSessionDedupCache& dedup, SessionManager& mgr,
                                 SessionBufferArena& arena) {
     auto& entries = dedup.entries();
-    for (auto it = entries.begin(); it != entries.end();) {
-        SessionId id = it->first;
-        DedupEntry& entry = it->second;
+    for (auto map_it = entries.begin(); map_it != entries.end();) {
+        SessionId id = map_it->first;
+        std::vector<DedupEntry>& incarnations = map_it->second;
 
-        if (mgr.has_live_session(id)) {
-            // The session id has already been reused by a new
-            // incarnation, so the old dedup window is over -- proactively
-            // reclaim whatever buffer the closed incarnation left behind
-            // rather than waiting out the rest of the TTL.
-            arena.release(entry.buffer_ref);
-            it = entries.erase(it);
-            continue;
+        for (auto vec_it = incarnations.begin(); vec_it != incarnations.end();) {
+            if (mgr.has_live_session(id)) {
+                // The session id has already been reused by a new
+                // incarnation, so every closed incarnation still on
+                // record for it is proactively reclaimed rather than
+                // waiting out the rest of its TTL.
+                arena.release(vec_it->buffer_ref);
+                vec_it = incarnations.erase(vec_it);
+                continue;
+            }
+
+            if (now_ms_ - vec_it->closed_at > dedup.ttl_ms()) {
+                vec_it = incarnations.erase(vec_it);
+            } else {
+                ++vec_it;
+            }
         }
 
-        if (now_ms_ - entry.closed_at > dedup.ttl_ms()) {
-            it = entries.erase(it);
+        if (incarnations.empty()) {
+            map_it = entries.erase(map_it);
         } else {
-            ++it;
+            ++map_it;
         }
     }
 }

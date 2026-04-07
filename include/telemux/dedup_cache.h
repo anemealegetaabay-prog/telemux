@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <unordered_map>
+#include <vector>
 
 #include "telemux/wire_format.h"
 
@@ -20,6 +21,10 @@ struct DedupEntry {
     Timestamp closed_at = 0;
 };
 
+// A session id can be closed and reopened several times in quick
+// succession (rapid connect/disconnect churn) before a sweep ever runs,
+// so each id may have more than one still-outstanding closed incarnation
+// to track -- not just the most recent one.
 class RecentSessionDedupCache {
 public:
     explicit RecentSessionDedupCache(uint32_t ttl_ms) : ttl_ms_(ttl_ms) {}
@@ -28,11 +33,11 @@ public:
     bool is_duplicate(SessionId id, const uint8_t* payload, size_t len) const;
 
     // Exposed so IdleSessionSweeper can walk and expire/reclaim entries.
-    std::unordered_map<SessionId, DedupEntry>& entries() { return entries_; }
+    std::unordered_map<SessionId, std::vector<DedupEntry>>& entries() { return entries_; }
     uint32_t ttl_ms() const { return ttl_ms_; }
 
 private:
-    std::unordered_map<SessionId, DedupEntry> entries_;
+    std::unordered_map<SessionId, std::vector<DedupEntry>> entries_;
     uint32_t ttl_ms_;
 };
 
