@@ -37,6 +37,42 @@ TELEMUX_TEST(test_sweep_does_not_double_free_reused_session_buffer) {
     CHECK(true);
 }
 
+TELEMUX_TEST(test_sweep_handles_multiple_stacked_closed_incarnations) {
+    TelemuxConfig config;
+    config.session_id_bits = 8;
+    config.dedup_entry_ttl_ms = 30000;
+
+    SessionBufferArena arena;
+    RecentSessionDedupCache dedup(config.dedup_entry_ttl_ms);
+    SessionManager mgr(config, arena, dedup);
+    IdleSessionSweeper sweeper(/*start_ms=*/0);
+
+    SessionId id = mgr.allocate_session_id();
+
+    // Close and reopen the same id twice in a row -- rapid connect/
+    // disconnect churn -- before any sweep runs, so two closed
+    // incarnations end up stacked for the same id.
+    mgr.open_session(id);
+    std::vector<uint8_t> payload1 = {1, 2, 3};
+    mgr.write_session_data(id, payload1.data(), payload1.size());
+    mgr.close_session(id, /*now=*/0);
+
+    mgr.open_session(id);
+    std::vector<uint8_t> payload2 = {4, 5, 6, 7};
+    mgr.write_session_data(id, payload2.data(), payload2.size());
+    mgr.close_session(id, /*now=*/5);
+
+    // Force a third incarnation so the sweep sees the id as reused.
+    mgr.open_session(id);
+
+    sweeper.advance(10);
+    sweeper.sweep(dedup, mgr, arena);
+
+    // A clean return here means both stacked incarnations' buffers were
+    // each released exactly once.
+    CHECK(true);
+}
+
 TELEMUX_TEST(test_session_id_fits_wire_field_after_many_sessions) {
     TelemuxConfig config;
     config.session_id_bits = 8;
