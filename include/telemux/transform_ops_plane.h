@@ -22,4 +22,9 @@ private:
     uint32_t target_width_;
 };
 
+// Interleaves two same-height channel planes side by side into one wider
+// merged plane (e.g. combining separately-decoded channel planes for a
+// multi-channel sensor group). `out` is populated only on success.
+TransformStatus merge_plane_channels(const PlaneBuffer& a, const PlaneBuffer& b, PlaneBuffer& out);
+
 }  // namespace telemux

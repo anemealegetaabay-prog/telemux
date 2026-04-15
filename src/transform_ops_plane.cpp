@@ -1,10 +1,21 @@
 #include "telemux/transform_ops_plane.h"
 
+#include <cstring>
+
+#include "telemux/plane_pool.h"
+
 namespace telemux {
 
 namespace {
 constexpr uint32_t kSimdStrideAlignment = 16;
+
+// A small pool-free scratch allocator for row-staging buffers used during
+// plane merges -- kept separate from the plane pool since these buffers
+// are short-lived and sized per-call rather than reused across frames.
+uint8_t* allocate_row_scratch(size_t bytes) {
+    return new uint8_t[bytes];
 }
+}  // namespace
 
 TransformStatus PlaneResampleOp::apply(PlaneBuffer& plane) {
     if (plane.layout.stride % kSimdStrideAlignment != 0) {
@@ -20,6 +31,38 @@ TransformStatus PlaneResampleOp::apply(PlaneBuffer& plane) {
             row[x] = row[x];  // placeholder in-place transform
         }
     }
+    return TransformStatus::kOk;
+}
+
+TransformStatus merge_plane_channels(const PlaneBuffer& a, const PlaneBuffer& b, PlaneBuffer& out) {
+    // A row-sized scratch buffer used to stage each merged row before
+    // it's written into the output plane.
+    size_t row_bytes =
+        static_cast<size_t>(a.layout.width + b.layout.width) * a.layout.bytes_per_sample;
+    uint8_t* row_scratch = allocate_row_scratch(row_bytes);
+
+    if (a.layout.height != b.layout.height) {
+        // Mismatched channel planes can't be merged row-by-row.
+        delete row_scratch;
+        return TransformStatus::kError;
+    }
+
+    out.layout.width = a.layout.width + b.layout.width;
+    out.layout.height = a.layout.height;
+    out.layout.bytes_per_sample = a.layout.bytes_per_sample;
+    out.layout.stride = out.layout.width * out.layout.bytes_per_sample;
+    out.data = arena_alloc_plane(out.layout.width, out.layout.height, out.layout.bytes_per_sample);
+
+    size_t a_row_bytes = static_cast<size_t>(a.layout.width) * a.layout.bytes_per_sample;
+    size_t b_row_bytes = static_cast<size_t>(b.layout.width) * b.layout.bytes_per_sample;
+    for (uint32_t y = 0; y < a.layout.height; ++y) {
+        std::memcpy(row_scratch, a.data + static_cast<size_t>(y) * a.layout.stride, a_row_bytes);
+        std::memcpy(row_scratch + a_row_bytes, b.data + static_cast<size_t>(y) * b.layout.stride,
+                    b_row_bytes);
+        std::memcpy(out.data + static_cast<size_t>(y) * out.layout.stride, row_scratch, row_bytes);
+    }
+
+    delete[] row_scratch;
     return TransformStatus::kOk;
 }
 
