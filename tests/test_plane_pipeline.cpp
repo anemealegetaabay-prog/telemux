@@ -52,3 +52,35 @@ TELEMUX_TEST(test_retry_renormalize_does_not_mismatch_allocator) {
     // allocator for the plane's scratch buffer.
     CHECK(st != TransformStatus::kError);
 }
+
+TELEMUX_TEST(test_merge_channel_height_mismatch_does_not_mismatch_allocator) {
+    // Two channel planes with different heights can't be merged row-by-row;
+    // merge_plane_channels bails out through its early-return cleanup path
+    // before ever touching the output plane.
+    uint32_t width_a = 8, height_a = 4;
+    uint32_t width_b = 8, height_b = 6;
+    std::vector<uint8_t> raw_a(width_a * height_a, 0x11);
+    std::vector<uint8_t> raw_b(width_b * height_b, 0x22);
+
+    auto decoded_a = decode_plane_payload(raw_a.data(), raw_a.size(), width_a, height_a, 1);
+    auto decoded_b = decode_plane_payload(raw_b.data(), raw_b.size(), width_b, height_b, 1);
+    CHECK(decoded_a.ok());
+    CHECK(decoded_b.ok());
+    PlaneBuffer plane_a = decoded_a.value();
+    PlaneBuffer plane_b = decoded_b.value();
+
+    DecodeLimits limits;
+    normalize_plane_layout(plane_a, limits);
+    normalize_plane_layout(plane_b, limits);
+
+    PlaneBuffer merged{};
+    TransformStatus st = merge_plane_channels(plane_a, plane_b, merged);
+
+    // A clean return here (rather than an allocator-mismatch abort) means
+    // the early-return cleanup used a consistent allocator for its scratch
+    // buffer.
+    CHECK(st == TransformStatus::kError);
+
+    arena_free_plane(plane_a.data);
+    arena_free_plane(plane_b.data);
+}
