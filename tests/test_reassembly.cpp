@@ -33,7 +33,7 @@ std::vector<uint8_t> build_frame(uint16_t session_id, uint8_t flags,
 
 }  // namespace
 
-TELEMUX_TEST(test_consolidation_survives_intervening_compaction) {
+TELEMUX_TEST(test_two_fragment_message_reassembles_after_intervening_traffic) {
     TelemuxConfig config;
     config.recv_arena_compact_threshold_bytes = 256;
     RecvArena arena(64);
@@ -43,20 +43,14 @@ TELEMUX_TEST(test_consolidation_survives_intervening_compaction) {
     std::vector<uint8_t> leading = {'L', 'E', 'A', 'D'};
     std::vector<uint8_t> trailing = {'T', 'R', 'A', 'I', 'L'};
 
-    // A decoy session that also stays partially assembled for the whole
-    // test, ahead of session 1 in arrival order. Its presence is what lets
-    // compaction actually shift session 1's bytes around: with only one
-    // long-lived segment, a compaction pass has nothing to reorder it
-    // against and it would trivially stay where it started.
+    // A second session that also stays partially assembled for the whole
+    // test, arriving ahead of session 1.
     uint8_t frag_flags = static_cast<uint8_t>(FrameFlags::kFragmented);
     std::vector<uint8_t> decoy_leading = {'D', 'E', 'C', 'O', 'Y', '!'};
     auto decoy_frame = build_frame(/*session=*/2, frag_flags, decoy_leading, /*total_fragments=*/2);
     auto decoy_r = parser.feed_frame(decoy_frame.data(), decoy_frame.size());
     CHECK(decoy_r.ok());
 
-    // A single consumed frame between the decoy and session 1's leading
-    // fragment: once compaction drops it, session 1's live bytes end up
-    // sitting earlier than where its offset was originally recorded.
     std::vector<uint8_t> spacer(40, 0xEE);
     auto spacer_frame = build_frame(/*session=*/3, 0, spacer);
     auto spacer_r = parser.feed_frame(spacer_frame.data(), spacer_frame.size());
@@ -86,7 +80,7 @@ TELEMUX_TEST(test_consolidation_survives_intervening_compaction) {
     CHECK(r2.value() == expected);
 }
 
-TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
+TELEMUX_TEST(test_three_fragment_message_reassembles_with_intervening_traffic) {
     TelemuxConfig config;
     config.recv_arena_compact_threshold_bytes = 256;
     RecvArena arena(64);
@@ -96,8 +90,8 @@ TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
     uint8_t frag_flags = static_cast<uint8_t>(FrameFlags::kFragmented);
     uint8_t final_flags = frag_flags | static_cast<uint8_t>(FrameFlags::kFragmentFinal);
 
-    // A decoy session that stays partially assembled for the whole test,
-    // ahead of session 1, so compaction has something to reorder against.
+    // A second session that stays partially assembled for the whole test,
+    // ahead of session 1.
     std::vector<uint8_t> decoy_leading = {'D', 'E', 'C', 'O', 'Y', '!'};
     auto decoy_frame = build_frame(/*session=*/2, frag_flags, decoy_leading, 2);
     CHECK(parser.feed_frame(decoy_frame.data(), decoy_frame.size()).ok());
@@ -106,10 +100,8 @@ TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
     auto spacer_frame = build_frame(/*session=*/3, 0, spacer);
     CHECK(parser.feed_frame(spacer_frame.data(), spacer_frame.size()).ok());
 
-    // Three non-final fragments for session 1, each separated by enough
-    // unrelated traffic to force at least one compaction between them --
-    // every one of their cached offsets needs to be independently kept
-    // correct, not just the first.
+    // Three non-final fragments for session 1, each separated by unrelated
+    // traffic on other sessions.
     std::vector<uint8_t> part1 = {'A', 'A', 'A', 'A'};
     auto f1 = build_frame(1, frag_flags, part1, 4);
     CHECK(parser.feed_frame(f1.data(), f1.size()).ok());
@@ -130,8 +122,6 @@ TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
         CHECK(parser.feed_frame(frame.data(), frame.size()).ok());
     }
 
-    // One more, larger filler right before the final fragment to force a
-    // compaction with nothing left uncompacted in between.
     std::vector<uint8_t> big_filler(300, 0x77);
     auto bf = build_frame(9999, 0, big_filler);
     CHECK(parser.feed_frame(bf.data(), bf.size()).ok());
@@ -147,7 +137,7 @@ TELEMUX_TEST(test_three_fragment_message_survives_multiple_compactions) {
     CHECK(r3.value() == expected);
 }
 
-TELEMUX_TEST(test_compaction_still_reclaims_during_long_lived_partial_message) {
+TELEMUX_TEST(test_partial_message_bounded_storage_under_sustained_traffic) {
     TelemuxConfig config;
     config.recv_arena_compact_threshold_bytes = 256;
     RecvArena arena(64);
@@ -159,9 +149,6 @@ TELEMUX_TEST(test_compaction_still_reclaims_during_long_lived_partial_message) {
     auto frame1 = build_frame(1, frag_flags, leading, 2);
     parser.feed_frame(frame1.data(), frame1.size());
 
-    // Session 1's message stays partially assembled for the whole loop;
-    // storage must stay bounded from the unrelated sessions' traffic
-    // being reclaimed, not grow without limit.
     for (int i = 0; i < 500; ++i) {
         std::vector<uint8_t> filler(64, static_cast<uint8_t>(i));
         auto frame = build_frame(static_cast<uint16_t>(1000 + (i % 200)), 0, filler);

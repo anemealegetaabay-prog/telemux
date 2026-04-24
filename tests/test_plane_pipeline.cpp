@@ -10,7 +10,7 @@
 
 using namespace telemux;
 
-TELEMUX_TEST(test_exported_plane_buffer_uses_raw_delete_not_arena_free) {
+TELEMUX_TEST(test_export_plane_to_owned_buffer_roundtrip) {
     std::vector<uint8_t> raw(64 * 64, 0x42);
     auto decoded = decode_plane_payload(raw.data(), raw.size(), 64, 64, 1);
     CHECK(decoded.ok());
@@ -19,9 +19,8 @@ TELEMUX_TEST(test_exported_plane_buffer_uses_raw_delete_not_arena_free) {
     DecodeLimits limits;
     normalize_plane_layout(plane, limits);
 
-    // `exported` is allocated with plain new[] inside
-    // export_plane_to_owned_buffer, never touching the plane pool --
-    // freeing it with delete[] must run cleanly.
+    // The caller owns the exported copy outright and is responsible for
+    // freeing it independently of the source plane.
     uint8_t* exported = export_plane_to_owned_buffer(plane);
     delete[] exported;
 
@@ -29,7 +28,7 @@ TELEMUX_TEST(test_exported_plane_buffer_uses_raw_delete_not_arena_free) {
     CHECK(true);
 }
 
-TELEMUX_TEST(test_retry_renormalize_does_not_mismatch_allocator) {
+TELEMUX_TEST(test_resample_retry_recovers_plane_layout) {
     // An odd width clamps to a stride that isn't 16-byte aligned, forcing
     // PlaneResampleOp to signal kRetryWithRenormalizedLayout and exercise
     // the pipeline's retry-recovery path.
@@ -48,15 +47,10 @@ TELEMUX_TEST(test_retry_renormalize_does_not_mismatch_allocator) {
     PlanePipeline pipeline;
     TransformStatus st = pipeline.execute_plane_op(op, plane, limits, raw.data(), raw.size());
 
-    // A clean return here means the retry path used a consistent
-    // allocator for the plane's scratch buffer.
     CHECK(st != TransformStatus::kError);
 }
 
-TELEMUX_TEST(test_merge_channel_height_mismatch_does_not_mismatch_allocator) {
-    // Two channel planes with different heights can't be merged row-by-row;
-    // merge_plane_channels bails out through its early-return cleanup path
-    // before ever touching the output plane.
+TELEMUX_TEST(test_merge_channel_rejects_mismatched_heights) {
     uint32_t width_a = 8, height_a = 4;
     uint32_t width_b = 8, height_b = 6;
     std::vector<uint8_t> raw_a(width_a * height_a, 0x11);
@@ -76,9 +70,6 @@ TELEMUX_TEST(test_merge_channel_height_mismatch_does_not_mismatch_allocator) {
     PlaneBuffer merged{};
     TransformStatus st = merge_plane_channels(plane_a, plane_b, merged);
 
-    // A clean return here (rather than an allocator-mismatch abort) means
-    // the early-return cleanup used a consistent allocator for its scratch
-    // buffer.
     CHECK(st == TransformStatus::kError);
 
     arena_free_plane(plane_a.data);

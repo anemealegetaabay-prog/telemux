@@ -9,7 +9,7 @@
 
 using namespace telemux;
 
-TELEMUX_TEST(test_rollback_restores_after_unrelated_merge_growth) {
+TELEMUX_TEST(test_rollback_after_interleaved_merge_sequence) {
     SampleArena arena(64);  // small, so a handful of merges forces growth
     RegisterFile regs;
     UndoRegisterFile undo;
@@ -64,7 +64,7 @@ TELEMUX_TEST(test_rollback_restores_after_unrelated_merge_growth) {
     CHECK(std::memcmp(regs.regs[0].data, seed, 16) == 0);
 }
 
-TELEMUX_TEST(test_repeat_peek_survives_unrelated_merge_growth) {
+TELEMUX_TEST(test_repeat_peek_after_interleaved_merge_sequence) {
     SampleArena arena(64);  // small, so a handful of merges forces growth
     RegisterFile regs;
     UndoRegisterFile undo;

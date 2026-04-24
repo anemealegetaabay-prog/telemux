@@ -8,7 +8,7 @@
 
 using namespace telemux;
 
-TELEMUX_TEST(test_sweep_does_not_double_free_reused_session_buffer) {
+TELEMUX_TEST(test_sweep_after_immediate_session_id_reuse) {
     TelemuxConfig config;
     config.session_id_bits = 8;
     config.dedup_entry_ttl_ms = 30000;
@@ -32,12 +32,10 @@ TELEMUX_TEST(test_sweep_does_not_double_free_reused_session_buffer) {
     sweeper.advance(10);
     sweeper.sweep(dedup, mgr, arena);
 
-    // A clean return here means the sweep only released the closed
-    // incarnation's buffer once.
     CHECK(true);
 }
 
-TELEMUX_TEST(test_sweep_handles_multiple_stacked_closed_incarnations) {
+TELEMUX_TEST(test_sweep_after_repeated_close_reopen_churn) {
     TelemuxConfig config;
     config.session_id_bits = 8;
     config.dedup_entry_ttl_ms = 30000;
@@ -49,9 +47,7 @@ TELEMUX_TEST(test_sweep_handles_multiple_stacked_closed_incarnations) {
 
     SessionId id = mgr.allocate_session_id();
 
-    // Close and reopen the same id twice in a row -- rapid connect/
-    // disconnect churn -- before any sweep runs, so two closed
-    // incarnations end up stacked for the same id.
+    // Close and reopen the same id twice in a row before any sweep runs.
     mgr.open_session(id);
     std::vector<uint8_t> payload1 = {1, 2, 3};
     mgr.write_session_data(id, payload1.data(), payload1.size());
@@ -68,8 +64,6 @@ TELEMUX_TEST(test_sweep_handles_multiple_stacked_closed_incarnations) {
     sweeper.advance(10);
     sweeper.sweep(dedup, mgr, arena);
 
-    // A clean return here means both stacked incarnations' buffers were
-    // each released exactly once.
     CHECK(true);
 }
 

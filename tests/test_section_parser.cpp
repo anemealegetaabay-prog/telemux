@@ -24,11 +24,8 @@ void append_section_header(std::vector<uint8_t>& out, uint32_t tag, uint32_t len
 
 }  // namespace
 
-TELEMUX_TEST(test_failed_nested_section_does_not_leak_stack_depth) {
-    // A nested child whose declared length exceeds the parent's budget:
-    // enter_nested_section rejects it, and parse_section_body skips past
-    // its claimed length and continues with the next sibling. The nest
-    // depth must be back to where it started either way.
+TELEMUX_TEST(test_oversized_nested_section_then_next_sibling_parses) {
+    // A nested child whose declared length exceeds the parent's budget.
     std::vector<uint8_t> input;
     append_section_header(input, section_tag::kGroup, /*length=*/1000, /*nested=*/true);
     input.resize(input.size() + 1000, 0);  // bytes for skip() to consume
@@ -41,10 +38,8 @@ TELEMUX_TEST(test_failed_nested_section_does_not_leak_stack_depth) {
     CHECK(parser.debug_nest_depth() == depth_before);
 }
 
-TELEMUX_TEST(test_reserved_tag_section_does_not_leak_stack_depth) {
-    // A nested child using the reserved zero tag: enter_nested_section
-    // rejects it for a completely different reason than a budget
-    // overrun, and the nest depth must still be back to where it started.
+TELEMUX_TEST(test_reserved_tag_section_then_next_sibling_parses) {
+    // A nested child using the reserved zero tag.
     std::vector<uint8_t> input;
     append_section_header(input, /*tag=*/0, /*length=*/0, /*nested=*/true);
 
@@ -56,7 +51,7 @@ TELEMUX_TEST(test_reserved_tag_section_does_not_leak_stack_depth) {
     CHECK(parser.debug_nest_depth() == depth_before);
 }
 
-TELEMUX_TEST(test_nested_section_parse_is_allocation_free) {
+TELEMUX_TEST(test_deeply_nested_section_chain_parses) {
     // A chain of validly-nested sections, deep enough to be a realistic
     // grouping hierarchy but comfortably under MAX_NEST_DEPTH.
     std::vector<uint8_t> input;
