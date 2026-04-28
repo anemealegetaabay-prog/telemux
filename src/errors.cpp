@@ -17,6 +17,9 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kChecksumMismatch: return "ChecksumMismatch";
         case ErrorCode::kLayoutInvalid: return "LayoutInvalid";
         case ErrorCode::kQuerySyntaxError: return "QuerySyntaxError";
+        case ErrorCode::kCalibrationOutOfDomain: return "CalibrationOutOfDomain";
+        case ErrorCode::kCalibrationTruncated: return "CalibrationTruncated";
+        case ErrorCode::kCalibrationInvalidCurve: return "CalibrationInvalidCurve";
     }
     return "Unknown";
 }

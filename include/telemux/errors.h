@@ -19,6 +19,9 @@ enum class ErrorCode : uint32_t {
     kChecksumMismatch,
     kLayoutInvalid,
     kQuerySyntaxError,
+    kCalibrationOutOfDomain,
+    kCalibrationTruncated,
+    kCalibrationInvalidCurve,
 };
 
 struct Error {

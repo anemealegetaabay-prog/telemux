@@ -56,6 +56,7 @@ set(TELEMUX_SOURCES
   src/plane_pipeline.cpp
   src/codec_rle.cpp
   src/serializer.cpp
+  src/calibration.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})
