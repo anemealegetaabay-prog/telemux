@@ -57,6 +57,7 @@ set(TELEMUX_SOURCES
   src/codec_rle.cpp
   src/serializer.cpp
   src/calibration.cpp
+  src/tlmx_file.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})

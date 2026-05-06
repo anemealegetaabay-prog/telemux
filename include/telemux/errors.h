@@ -22,6 +22,12 @@ enum class ErrorCode : uint32_t {
     kCalibrationOutOfDomain,
     kCalibrationTruncated,
     kCalibrationInvalidCurve,
+    kContainerBadMagic,
+    kContainerUnsupportedVersion,
+    kContainerTruncated,
+    kContainerChecksumMismatch,
+    kContainerIndexInvalid,
+    kContainerIoError,
 };
 
 struct Error {

@@ -20,6 +20,12 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kCalibrationOutOfDomain: return "CalibrationOutOfDomain";
         case ErrorCode::kCalibrationTruncated: return "CalibrationTruncated";
         case ErrorCode::kCalibrationInvalidCurve: return "CalibrationInvalidCurve";
+        case ErrorCode::kContainerBadMagic: return "ContainerBadMagic";
+        case ErrorCode::kContainerUnsupportedVersion: return "ContainerUnsupportedVersion";
+        case ErrorCode::kContainerTruncated: return "ContainerTruncated";
+        case ErrorCode::kContainerChecksumMismatch: return "ContainerChecksumMismatch";
+        case ErrorCode::kContainerIndexInvalid: return "ContainerIndexInvalid";
+        case ErrorCode::kContainerIoError: return "ContainerIoError";
     }
     return "Unknown";
 }
