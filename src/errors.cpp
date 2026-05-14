@@ -26,6 +26,7 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kContainerChecksumMismatch: return "ContainerChecksumMismatch";
         case ErrorCode::kContainerIndexInvalid: return "ContainerIndexInvalid";
         case ErrorCode::kContainerIoError: return "ContainerIoError";
+        case ErrorCode::kAlertRuleSyntaxError: return "AlertRuleSyntaxError";
     }
     return "Unknown";
 }

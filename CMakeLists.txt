@@ -58,6 +58,7 @@ set(TELEMUX_SOURCES
   src/serializer.cpp
   src/calibration.cpp
   src/tlmx_file.cpp
+  src/window_stats.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})

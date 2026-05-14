@@ -28,6 +28,7 @@ enum class ErrorCode : uint32_t {
     kContainerChecksumMismatch,
     kContainerIndexInvalid,
     kContainerIoError,
+    kAlertRuleSyntaxError,
 };
 
 struct Error {
