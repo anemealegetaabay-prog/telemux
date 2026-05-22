@@ -27,6 +27,7 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kContainerIndexInvalid: return "ContainerIndexInvalid";
         case ErrorCode::kContainerIoError: return "ContainerIoError";
         case ErrorCode::kAlertRuleSyntaxError: return "AlertRuleSyntaxError";
+        case ErrorCode::kClockInsufficientSamples: return "ClockInsufficientSamples";
     }
     return "Unknown";
 }

@@ -29,6 +29,7 @@ enum class ErrorCode : uint32_t {
     kContainerIndexInvalid,
     kContainerIoError,
     kAlertRuleSyntaxError,
+    kClockInsufficientSamples,
 };
 
 struct Error {
