@@ -28,6 +28,10 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kContainerIoError: return "ContainerIoError";
         case ErrorCode::kAlertRuleSyntaxError: return "AlertRuleSyntaxError";
         case ErrorCode::kClockInsufficientSamples: return "ClockInsufficientSamples";
+        case ErrorCode::kRegistryDuplicateDevice: return "RegistryDuplicateDevice";
+        case ErrorCode::kRegistryUnknownDevice: return "RegistryUnknownDevice";
+        case ErrorCode::kRegistryTruncated: return "RegistryTruncated";
+        case ErrorCode::kRegistryInvalidDescriptor: return "RegistryInvalidDescriptor";
     }
     return "Unknown";
 }

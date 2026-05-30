@@ -30,6 +30,10 @@ enum class ErrorCode : uint32_t {
     kContainerIoError,
     kAlertRuleSyntaxError,
     kClockInsufficientSamples,
+    kRegistryDuplicateDevice,
+    kRegistryUnknownDevice,
+    kRegistryTruncated,
+    kRegistryInvalidDescriptor,
 };
 
 struct Error {
