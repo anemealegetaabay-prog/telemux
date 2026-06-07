@@ -34,6 +34,9 @@ enum class ErrorCode : uint32_t {
     kRegistryUnknownDevice,
     kRegistryTruncated,
     kRegistryInvalidDescriptor,
+    kExportUnsupportedFormat,
+    kExportEncodingError,
+    kExportParseError,
 };
 
 struct Error {

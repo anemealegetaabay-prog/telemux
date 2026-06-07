@@ -61,6 +61,7 @@ set(TELEMUX_SOURCES
   src/window_stats.cpp
   src/clock_sync.cpp
   src/device_registry.cpp
+  src/record_export.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})

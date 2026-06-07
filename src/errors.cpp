@@ -32,6 +32,9 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kRegistryUnknownDevice: return "RegistryUnknownDevice";
         case ErrorCode::kRegistryTruncated: return "RegistryTruncated";
         case ErrorCode::kRegistryInvalidDescriptor: return "RegistryInvalidDescriptor";
+        case ErrorCode::kExportUnsupportedFormat: return "ExportUnsupportedFormat";
+        case ErrorCode::kExportEncodingError: return "ExportEncodingError";
+        case ErrorCode::kExportParseError: return "ExportParseError";
     }
     return "Unknown";
 }
