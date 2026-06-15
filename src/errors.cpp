@@ -35,6 +35,7 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kExportUnsupportedFormat: return "ExportUnsupportedFormat";
         case ErrorCode::kExportEncodingError: return "ExportEncodingError";
         case ErrorCode::kExportParseError: return "ExportParseError";
+        case ErrorCode::kTraceQuerySyntaxError: return "TraceQuerySyntaxError";
     }
     return "Unknown";
 }

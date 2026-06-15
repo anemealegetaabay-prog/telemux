@@ -37,6 +37,7 @@ enum class ErrorCode : uint32_t {
     kExportUnsupportedFormat,
     kExportEncodingError,
     kExportParseError,
+    kTraceQuerySyntaxError,
 };
 
 struct Error {
