@@ -63,6 +63,7 @@ set(TELEMUX_SOURCES
   src/device_registry.cpp
   src/record_export.cpp
   src/event_trace.cpp
+  src/session_digest.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})

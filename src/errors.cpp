@@ -36,6 +36,7 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kExportEncodingError: return "ExportEncodingError";
         case ErrorCode::kExportParseError: return "ExportParseError";
         case ErrorCode::kTraceQuerySyntaxError: return "TraceQuerySyntaxError";
+        case ErrorCode::kDigestInsufficientData: return "DigestInsufficientData";
     }
     return "Unknown";
 }
