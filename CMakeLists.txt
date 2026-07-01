@@ -64,6 +64,7 @@ set(TELEMUX_SOURCES
   src/record_export.cpp
   src/event_trace.cpp
   src/session_digest.cpp
+  src/pipeline_profile.cpp
 )
 
 add_library(telemux STATIC ${TELEMUX_SOURCES})

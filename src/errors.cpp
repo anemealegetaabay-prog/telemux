@@ -37,6 +37,9 @@ const char* error_code_name(ErrorCode code) {
         case ErrorCode::kExportParseError: return "ExportParseError";
         case ErrorCode::kTraceQuerySyntaxError: return "TraceQuerySyntaxError";
         case ErrorCode::kDigestInsufficientData: return "DigestInsufficientData";
+        case ErrorCode::kProfileSyntaxError: return "ProfileSyntaxError";
+        case ErrorCode::kProfileUnresolvedReference: return "ProfileUnresolvedReference";
+        case ErrorCode::kProfileDuplicateSection: return "ProfileDuplicateSection";
     }
     return "Unknown";
 }

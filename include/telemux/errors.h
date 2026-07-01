@@ -39,6 +39,9 @@ enum class ErrorCode : uint32_t {
     kExportParseError,
     kTraceQuerySyntaxError,
     kDigestInsufficientData,
+    kProfileSyntaxError,
+    kProfileUnresolvedReference,
+    kProfileDuplicateSection,
 };
 
 struct Error {
