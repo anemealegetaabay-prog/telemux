@@ -14,6 +14,7 @@
 #include "telemux/recv_arena.h"
 #include "telemux/serializer.h"
 #include "telemux/stats_export.h"
+#include "telemux/tlmx_file.h"
 
 namespace {
 
@@ -59,10 +60,27 @@ int cmd_query(const std::string& expr) {
     return 0;
 }
 
+int cmd_inspect(const std::string& path) {
+    auto reader = telemux::TlmxReader::open_file(path);
+    if (!reader.ok()) {
+        std::fprintf(stderr, "inspect failed: %s\n", telemux::error_code_name(reader.error().code));
+        return 1;
+    }
+
+    const auto& index = reader.value().index();
+    std::printf("container version %u, %zu session(s)\n", reader.value().version(), index.size());
+    for (const auto& entry : index) {
+        std::printf("  session %u: %u record(s) across %zu page(s)\n", entry.session_id,
+                     entry.total_records, entry.page_offsets.size());
+    }
+    return 0;
+}
+
 void print_usage() {
     std::fprintf(stderr,
-                  "usage: telemux_cli <decode|stats|query> [args]\n"
+                  "usage: telemux_cli <decode|inspect|stats|query> [args]\n"
                   "  decode <file>       decode a single frame from a file\n"
+                  "  inspect <file>      summarize a .tlmx session container\n"
                   "  stats               print current metrics as JSON\n"
                   "  query <expr>        evaluate a filter expression\n");
 }
@@ -78,6 +96,9 @@ int main(int argc, char** argv) {
     std::string cmd = argv[1];
     if (cmd == "decode" && argc >= 3) {
         return cmd_decode(argv[2]);
+    }
+    if (cmd == "inspect" && argc >= 3) {
+        return cmd_inspect(argv[2]);
     }
     if (cmd == "stats") {
         return cmd_stats();

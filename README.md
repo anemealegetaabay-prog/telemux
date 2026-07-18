@@ -38,6 +38,7 @@ for the transform pipeline's instruction set.
 
 ```
 telemux_cli decode <file>
+telemux_cli inspect <file.tlmx>
 telemux_cli stats
 telemux_cli query "channel == 3 and value > 100"
 ```
