@@ -6,7 +6,7 @@ void execute_filter(RegisterFile& regs, int reg, int32_t gain_q8) {
     Register& r = regs.regs[reg];
     if (!r.live) return;
     for (size_t i = 0; i < r.len; ++i) {
-        int32_t scaled = (static_cast<int32_t>(r.data[i]) * gain_q8) >> 8;
+        int64_t scaled = (static_cast<int64_t>(r.data[i]) * gain_q8) >> 8;
         if (scaled < 0) scaled = 0;
         if (scaled > 255) scaled = 255;
         r.data[i] = static_cast<uint8_t>(scaled);

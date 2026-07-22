@@ -10,7 +10,7 @@ uint32_t RecvArena::write(const uint8_t* data, uint32_t len, uint16_t session_id
     if (write_cursor_ + len > storage_.size()) {
         storage_.resize(write_cursor_ + len);
     }
-    std::memcpy(storage_.data() + write_cursor_, data, len);
+    if (len > 0) std::memcpy(storage_.data() + write_cursor_, data, len);
     uint32_t offset = static_cast<uint32_t>(write_cursor_);
     write_cursor_ += len;
     active_segments_.push_back({offset, len, session_id, false});

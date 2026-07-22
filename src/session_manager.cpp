@@ -14,11 +14,17 @@ SessionManager::SessionManager(const TelemuxConfig& config, SessionBufferArena& 
 
 SessionId SessionManager::allocate_session_id() {
     uint32_t space = config_.max_session_id_space();
-    SessionId id;
-    do {
+    SessionId id = static_cast<SessionId>(next_session_id_);
+    for (uint32_t tries = 0; tries <= space; ++tries) {
         id = static_cast<SessionId>(next_session_id_);
         next_session_id_ = (next_session_id_ + 1) & space;
-    } while (sessions_.count(id) > 0);
+        if (sessions_.count(id) == 0) {
+            return id;
+        }
+    }
+    // The id space is fully live -- hand back the next id in rotation
+    // anyway rather than blocking; the caller displaces whatever session
+    // currently holds it.
     return id;
 }
 
