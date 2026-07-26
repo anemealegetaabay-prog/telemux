@@ -18,6 +18,7 @@ enum class Opcode : uint8_t {
     kRollback = 4,
     kPeek = 5,
     kRepeatPeek = 6,
+    kReserve = 7,
 };
 
 struct VMInstruction {
@@ -47,6 +48,7 @@ private:
     void execute_rollback(int slot);
     void execute_peek(int reg_index);
     void execute_repeat_peek(int dst_reg);
+    void execute_reserve(int dst_reg, int32_t entry_count);
 
     SampleArena& arena_;
     RegisterFile& regs_;

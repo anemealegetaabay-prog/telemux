@@ -16,6 +16,14 @@ size_t round_up(size_t n, size_t align) { return (n + align - 1) / align * align
 struct PoolState {
     std::vector<std::pair<size_t, uint8_t*>> freelist;  // (bucket_size, ptr)
     std::unordered_map<uint8_t*, size_t> live_sizes;     // ptr -> bucket_size, pool-owned blocks only
+
+    ~PoolState() {
+        // Release every block the pool ever handed out at shutdown; both the
+        // recycled (freelist) and still-outstanding blocks are keyed here.
+        for (const auto& entry : live_sizes) {
+            std::free(entry.first);
+        }
+    }
 };
 
 PoolState& pool_state() {

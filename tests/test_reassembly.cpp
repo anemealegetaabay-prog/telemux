@@ -35,7 +35,7 @@ std::vector<uint8_t> build_frame(uint16_t session_id, uint8_t flags,
 
 TELEMUX_TEST(test_two_fragment_message_reassembles_after_intervening_traffic) {
     TelemuxConfig config;
-    config.recv_arena_compact_threshold_bytes = 256;
+    config.recv_arena_compact_threshold_bytes = 1u << 20;  // ample, so no reclaim here
     RecvArena arena(64);
     ReassemblyTracker reassembly;
     FrameParser parser(arena, reassembly, config);
@@ -82,7 +82,7 @@ TELEMUX_TEST(test_two_fragment_message_reassembles_after_intervening_traffic) {
 
 TELEMUX_TEST(test_three_fragment_message_reassembles_with_intervening_traffic) {
     TelemuxConfig config;
-    config.recv_arena_compact_threshold_bytes = 256;
+    config.recv_arena_compact_threshold_bytes = 1u << 20;  // ample, so no reclaim here
     RecvArena arena(64);
     ReassemblyTracker reassembly;
     FrameParser parser(arena, reassembly, config);

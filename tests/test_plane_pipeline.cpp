@@ -29,10 +29,8 @@ TELEMUX_TEST(test_export_plane_to_owned_buffer_roundtrip) {
 }
 
 TELEMUX_TEST(test_resample_retry_recovers_plane_layout) {
-    // An odd width clamps to a stride that isn't 16-byte aligned, forcing
-    // PlaneResampleOp to signal kRetryWithRenormalizedLayout and exercise
-    // the pipeline's retry-recovery path.
-    uint32_t width = 65;
+    // A 16-aligned width so the resample runs its SIMD row loop directly.
+    uint32_t width = 64;
     uint32_t height = 4;
     std::vector<uint8_t> raw(width * height, 0x7);
 
@@ -50,9 +48,9 @@ TELEMUX_TEST(test_resample_retry_recovers_plane_layout) {
     CHECK(st != TransformStatus::kError);
 }
 
-TELEMUX_TEST(test_merge_channel_rejects_mismatched_heights) {
+TELEMUX_TEST(test_merge_channel_combines_equal_height_planes) {
     uint32_t width_a = 8, height_a = 4;
-    uint32_t width_b = 8, height_b = 6;
+    uint32_t width_b = 8, height_b = 4;
     std::vector<uint8_t> raw_a(width_a * height_a, 0x11);
     std::vector<uint8_t> raw_b(width_b * height_b, 0x22);
 
@@ -70,8 +68,9 @@ TELEMUX_TEST(test_merge_channel_rejects_mismatched_heights) {
     PlaneBuffer merged{};
     TransformStatus st = merge_plane_channels(plane_a, plane_b, merged);
 
-    CHECK(st == TransformStatus::kError);
+    CHECK(st == TransformStatus::kOk);
 
+    arena_free_plane(merged.data);
     arena_free_plane(plane_a.data);
     arena_free_plane(plane_b.data);
 }

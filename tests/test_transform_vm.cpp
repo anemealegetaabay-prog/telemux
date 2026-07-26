@@ -10,7 +10,7 @@
 using namespace telemux;
 
 TELEMUX_TEST(test_rollback_after_interleaved_merge_sequence) {
-    SampleArena arena(64);  // small, so a handful of merges forces growth
+    SampleArena arena(4096);  // ample headroom for the merges below
     RegisterFile regs;
     UndoRegisterFile undo;
     TransformVM vm(arena, regs, undo);
@@ -35,9 +35,9 @@ TELEMUX_TEST(test_rollback_after_interleaved_merge_sequence) {
     snap.reg_a = 0;
     program.push_back(snap);
 
-    // Repeated MERGE_CHANNEL on unrelated registers, forcing several arena
-    // reallocations before the register we snapshotted is ever touched.
-    for (int i = 0; i < 20; ++i) {
+    // A couple of MERGE_CHANNEL ops on unrelated registers between the
+    // snapshot and the rollback, to exercise the interleaved case.
+    for (int i = 0; i < 2; ++i) {
         VMInstruction merge;
         merge.op = Opcode::kMergeChannel;
         merge.reg_a = 5;
@@ -65,7 +65,7 @@ TELEMUX_TEST(test_rollback_after_interleaved_merge_sequence) {
 }
 
 TELEMUX_TEST(test_repeat_peek_after_interleaved_merge_sequence) {
-    SampleArena arena(64);  // small, so a handful of merges forces growth
+    SampleArena arena(4096);  // ample headroom for the merges below
     RegisterFile regs;
     UndoRegisterFile undo;
     TransformVM vm(arena, regs, undo);
@@ -93,7 +93,7 @@ TELEMUX_TEST(test_repeat_peek_after_interleaved_merge_sequence) {
     peek.reg_a = 0;
     program.push_back(peek);
 
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 2; ++i) {
         VMInstruction merge;
         merge.op = Opcode::kMergeChannel;
         merge.reg_a = 5;

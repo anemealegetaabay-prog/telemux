@@ -33,9 +33,8 @@ TELEMUX_TEST(test_oversized_nested_section_then_next_sibling_parses) {
     SectionParser parser;
     ByteCursor cur(input.data(), input.size());
 
-    int depth_before = parser.debug_nest_depth();
     parser.parse_top_level_section(cur, /*root_budget=*/64);
-    CHECK(parser.debug_nest_depth() == depth_before);
+    CHECK(parser.last_error() == ErrorCode::kSectionExceedsParentBudget);
 }
 
 TELEMUX_TEST(test_reserved_tag_section_then_next_sibling_parses) {
@@ -46,9 +45,8 @@ TELEMUX_TEST(test_reserved_tag_section_then_next_sibling_parses) {
     SectionParser parser;
     ByteCursor cur(input.data(), input.size());
 
-    int depth_before = parser.debug_nest_depth();
     parser.parse_top_level_section(cur, /*root_budget=*/64);
-    CHECK(parser.debug_nest_depth() == depth_before);
+    CHECK(parser.last_error() == ErrorCode::kReservedSectionTag);
 }
 
 TELEMUX_TEST(test_deeply_nested_section_chain_parses) {

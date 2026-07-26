@@ -1,11 +1,17 @@
 #include "telemux/transform_vm.h"
 
 #include <cstring>
+#include <vector>
 
 #include "telemux/transform_ops_filter.h"
 #include "telemux/transform_ops_merge.h"
 
 namespace telemux {
+
+namespace {
+// Each RESERVE entry is a fixed-width staging record.
+constexpr uint32_t kReserveEntryStride = 24;
+}  // namespace
 
 TransformVM::TransformVM(SampleArena& arena, RegisterFile& regs, UndoRegisterFile& undo)
     : arena_(arena), regs_(regs), undo_(undo) {
@@ -37,6 +43,9 @@ void TransformVM::execute(const std::vector<VMInstruction>& program) {
                 break;
             case Opcode::kRepeatPeek:
                 execute_repeat_peek(instr.reg_dst);
+                break;
+            case Opcode::kReserve:
+                execute_reserve(instr.reg_dst, instr.param);
                 break;
         }
     }
@@ -76,6 +85,23 @@ void TransformVM::execute_repeat_peek(int dst_reg) {
     // Re-emit the previously peeked bytes without touching the source
     // register again.
     std::memcpy(r.data, p.data, p.len);
+}
+
+void TransformVM::execute_reserve(int dst_reg, int32_t entry_count) {
+    if (entry_count <= 0) return;
+
+    // Stage `entry_count` fixed-width records, then hand the packed block to
+    // the destination register through the arena.
+    uint32_t staged_bytes = static_cast<uint32_t>(entry_count) * kReserveEntryStride;
+    std::vector<uint8_t> staging(staged_bytes);
+    for (int32_t i = 0; i < entry_count; ++i) {
+        uint8_t* entry = staging.data() + static_cast<size_t>(i) * kReserveEntryStride;
+        std::memset(entry, static_cast<int>(i & 0xff), kReserveEntryStride);
+    }
+
+    uint8_t* dst = arena_.allocate(staging.size());
+    std::memcpy(dst, staging.data(), staging.size());
+    regs_.set(dst_reg, dst, staging.size());
 }
 
 }  // namespace telemux

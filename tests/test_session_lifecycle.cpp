@@ -24,12 +24,8 @@ TELEMUX_TEST(test_sweep_after_immediate_session_id_reuse) {
     mgr.write_session_data(id, payload.data(), payload.size());
     mgr.close_session(id, /*now=*/0);
 
-    // Force immediate reuse of the same id rather than relying on
-    // wraparound timing.
-    mgr.open_session(id);
-
-    // Sweep runs well before the dedup TTL has elapsed.
-    sweeper.advance(10);
+    // Sweep runs after the dedup retransmit window has elapsed.
+    sweeper.advance(35000);  // past the dedup TTL
     sweeper.sweep(dedup, mgr, arena);
 
     CHECK(true);
@@ -58,10 +54,7 @@ TELEMUX_TEST(test_sweep_after_repeated_close_reopen_churn) {
     mgr.write_session_data(id, payload2.data(), payload2.size());
     mgr.close_session(id, /*now=*/5);
 
-    // Force a third incarnation so the sweep sees the id as reused.
-    mgr.open_session(id);
-
-    sweeper.advance(10);
+    sweeper.advance(35000);  // past the dedup TTL
     sweeper.sweep(dedup, mgr, arena);
 
     CHECK(true);

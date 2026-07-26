@@ -12,6 +12,7 @@ instruction operates on numbered registers that reference bytes held by a
 | `MERGE_CHANNEL` | `reg_a`, `reg_b`, `reg_dst` | Concatenates `reg_a` and `reg_b` into `reg_dst` |
 | `SNAPSHOT` | `reg_a`, `slot` | Captures `reg_a`'s current contents into undo slot `slot` |
 | `ROLLBACK` | `slot` | Restores the register captured by undo slot `slot` |
+| `RESERVE` | `reg_dst`, `param` | Stages `param` fixed-width records and binds the packed block to `reg_dst` |
 
 `SNAPSHOT`/`ROLLBACK` let a program back out a filter pass that made a
 channel worse without needing to re-decode it. Both are zero-copy: they

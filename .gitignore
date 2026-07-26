@@ -7,3 +7,5 @@ build_verify/
 *.out
 .cache/
 compile_commands.json
+build_ledger/
+build_verify/
