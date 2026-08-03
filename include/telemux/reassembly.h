@@ -33,6 +33,12 @@ public:
                        uint32_t segments_total);
     bool has_pending(uint16_t session_id) const;
 
+    // Brings every remembered fragment offset forward after the receive
+    // arena has reclaimed space from the front of its store, so each still
+    // points at its bytes in the rebuilt store. `reclaimed_prefix_bytes` is
+    // how far the surviving segments slid toward offset zero.
+    void rebase_after_compact(uint32_t reclaimed_prefix_bytes);
+
     // Stitches every remembered fragment together, in arrival order, with
     // the given final fragment and returns the reassembled message.
     std::vector<uint8_t> finish_consolidation(uint16_t session_id, const RecvArena& arena,

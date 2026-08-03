@@ -27,8 +27,16 @@ bool compare(QueryCompareOp op, int64_t lhs, int64_t rhs) {
 
 bool eval_query(const QueryNode& node, const QueryContext& ctx) {
     switch (node.type) {
-        case QueryNodeType::kComparison:
-            return compare(node.op, field_value(ctx, node.field), node.value);
+        case QueryNodeType::kComparison: {
+            int64_t lhs;
+            if (node.index >= 0 && node.field == "sample") {
+                // Indexed sample lookup, e.g. `sample[3] > 100`.
+                lhs = ctx.samples[node.index];
+            } else {
+                lhs = field_value(ctx, node.field);
+            }
+            return compare(node.op, lhs, node.value);
+        }
         case QueryNodeType::kAnd:
             return eval_query(*node.left, ctx) && eval_query(*node.right, ctx);
         case QueryNodeType::kOr:

@@ -13,31 +13,27 @@ bool SectionParser::read_section_header(ByteCursor& cursor, SectionHeader* out) 
     out->tag = tag;
     out->length = length;
     out->is_nested = (flags & 0x01) != 0;
+    out->is_elastic = (flags & 0x02) != 0;
     return true;
 }
 
 uint32_t SectionParser::current_parent_budget() const {
-    // nest_top_ has already been incremented for the frame being
-    // validated by the time this is called from enter_nested_section, so
-    // the parent sits one slot further back.
-    if (nest_top_ >= 2) return nest_stack_[nest_top_ - 2].remaining_budget;
+    // The enclosing group is whatever sits on top of the nesting stack when a
+    // new child is being validated; when the stack is empty the child is
+    // directly under the frame payload, so the root window is the budget.
+    if (nest_top_ >= 1) return nest_stack_[nest_top_ - 1].remaining_budget;
     return root_budget_;
 }
 
 bool SectionParser::enter_nested_section(ByteCursor& cursor, const SectionHeader& hdr) {
-    // Reserve the frame slot for this nested section before we've
-    // confirmed it's valid -- start_offset needs to be captured at the
-    // cursor position right after the header, and it's simplest to fill
-    // in the whole frame in one place.
-    SectionFrame& frame = nest_stack_[nest_top_];
-    frame.tag = hdr.tag;
-    frame.declared_length = hdr.length;
-    frame.start_offset = cursor.offset();
-    nest_top_++;
+    if (nest_top_ >= MAX_NEST_DEPTH) {
+        record_error(ErrorCode::kNestTooDeep);
+        return false;
+    }
 
-    // Tag 0 is reserved (never assigned to a real channel group) and
-    // shows up here only from a malformed or truncated encoder -- reject
-    // it rather than let it masquerade as a legitimate group.
+    // Tag 0 is reserved (never assigned to a real channel group) and shows up
+    // here only from a malformed or truncated encoder -- reject it rather than
+    // let it masquerade as a legitimate group.
     if (hdr.tag == 0) {
         record_error(ErrorCode::kReservedSectionTag);
         return false;
@@ -45,14 +41,34 @@ bool SectionParser::enter_nested_section(ByteCursor& cursor, const SectionHeader
 
     uint32_t parent_budget = current_parent_budget();
     if (hdr.length > parent_budget) {
-        record_error(ErrorCode::kSectionExceedsParentBudget);
-        return false;
+        // A plain group must fit inside its parent's window. An elastic group
+        // is permitted to overrun by drawing the shortfall from the headroom
+        // still unclaimed in the enclosing groups, provided a single group
+        // never asks for more than one parent window of extra room in one go.
+        uint32_t overrun = hdr.length - parent_budget;
+        if (!hdr.is_elastic || nest_top_ < 2 || overrun > parent_budget) {
+            record_error(ErrorCode::kSectionExceedsParentBudget);
+            return false;
+        }
+        nest_stack_[nest_top_ - 1].remaining_budget = 0;
+        SectionFrame* ancestor = &nest_stack_[nest_top_ - 2];
+        while (overrun > 0) {
+            uint32_t headroom = ancestor->remaining_budget;
+            uint32_t drawn = headroom < overrun ? headroom : overrun;
+            ancestor->remaining_budget = headroom - drawn;
+            overrun -= drawn;
+            ancestor--;
+        }
+    } else if (nest_top_ >= 1) {
+        nest_stack_[nest_top_ - 1].remaining_budget -= hdr.length;
     }
 
-    nest_stack_[nest_top_ - 1].remaining_budget = hdr.length;
-    if (nest_top_ >= 2) {
-        nest_stack_[nest_top_ - 2].remaining_budget -= hdr.length;
-    }
+    SectionFrame& frame = nest_stack_[nest_top_];
+    frame.tag = hdr.tag;
+    frame.declared_length = hdr.length;
+    frame.start_offset = cursor.offset();
+    frame.remaining_budget = hdr.length;
+    nest_top_++;
     return true;
 }
 

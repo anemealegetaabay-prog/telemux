@@ -35,7 +35,18 @@ void RecvArena::compact() {
     for (const auto& seg : active_segments_) {
         if (!seg.consumed) new_size += seg.length;
     }
+    last_reclaimed_prefix_ = 0;
     if (new_size == write_cursor_) return;  // nothing consumed to reclaim
+
+    // Everything below the lowest still-live segment is consumed space the
+    // survivors slide down past; record how far so absolute-offset holders
+    // can be brought forward by the same amount.
+    for (const auto& seg : active_segments_) {
+        if (!seg.consumed) {
+            last_reclaimed_prefix_ = seg.offset;
+            break;
+        }
+    }
 
     std::vector<uint8_t> rebuilt(new_size);
     std::vector<SegmentTableEntry> kept;

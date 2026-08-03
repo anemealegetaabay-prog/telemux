@@ -37,11 +37,16 @@ struct FrameHeader {
 };
 
 // Tagged sub-record header used within a frame's payload for hierarchical
-// telemetry channel grouping. Sections may nest.
+// telemetry channel grouping. Sections may nest. An elastic section carries
+// a group whose byte extent is allowed to spill past its immediate parent's
+// declared window and draw on the enclosing groups' unused headroom, which
+// keeps variable-rate channel bursts from having to be re-chunked by the
+// encoder.
 struct SectionHeader {
     uint32_t tag;
     uint32_t length;
     bool is_nested;
+    bool is_elastic;
 };
 
 namespace section_tag {

@@ -50,6 +50,21 @@ private:
         std::string field = peek().text;
         advance();
 
+        // Optional element index, e.g. `sample[3]`.
+        int64_t index = -1;
+        if (peek().type == QueryTokenType::kLBracket) {
+            advance();
+            if (peek().type != QueryTokenType::kNumber) {
+                return make_error(ErrorCode::kQuerySyntaxError, "expected index");
+            }
+            index = peek().number;
+            advance();
+            if (peek().type != QueryTokenType::kRBracket) {
+                return make_error(ErrorCode::kQuerySyntaxError, "expected ]");
+            }
+            advance();
+        }
+
         QueryCompareOp op;
         switch (peek().type) {
             case QueryTokenType::kEq: op = QueryCompareOp::kEq; break;
@@ -74,6 +89,7 @@ private:
         node->field = field;
         node->op = op;
         node->value = value;
+        node->index = index;
         return Result<std::unique_ptr<QueryNode>>(std::move(node));
     }
 

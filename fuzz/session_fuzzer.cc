@@ -30,7 +30,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         uint8_t op = data[i++] % 4;
         switch (op) {
             case 0: {  // OPEN
-                SessionId id = mgr.allocate_session_id();
+                if (i + 2 > size) goto cleanup;
+                SessionId id = static_cast<SessionId>((data[i] << 8) | data[i + 1]);
+                i += 2;
                 mgr.open_session(id);
                 touched_ids.push_back(id);
                 break;

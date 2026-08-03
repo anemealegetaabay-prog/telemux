@@ -16,6 +16,21 @@ bool ReassemblyTracker::has_pending(uint16_t session_id) const {
     return it != pending_.end() && it->second.active;
 }
 
+void ReassemblyTracker::rebase_after_compact(uint32_t reclaimed_prefix_bytes) {
+    if (reclaimed_prefix_bytes == 0) return;
+    for (auto& kv : pending_) {
+        PendingConsolidation& pc = kv.second;
+        if (!pc.active) continue;
+        for (auto& frag : pc.fragments) {
+            // Fragments that lived within the reclaimed prefix are gone;
+            // the rest move forward by exactly what was reclaimed.
+            if (frag.offset >= reclaimed_prefix_bytes) {
+                frag.offset -= reclaimed_prefix_bytes;
+            }
+        }
+    }
+}
+
 std::vector<uint8_t> ReassemblyTracker::finish_consolidation(uint16_t session_id,
                                                               const RecvArena& arena,
                                                               const uint8_t* final_fragment,

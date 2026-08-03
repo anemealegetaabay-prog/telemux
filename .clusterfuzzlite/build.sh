@@ -49,6 +49,7 @@ HARNESSES=(
   section_fuzzer
   session_fuzzer
   plane_pipeline_fuzzer
+  query_fuzzer
 )
 
 for harness in "${HARNESSES[@]}"; do

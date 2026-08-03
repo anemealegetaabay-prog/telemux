@@ -24,6 +24,8 @@ enum class QueryTokenType {
     kOr,
     kLParen,
     kRParen,
+    kLBracket,
+    kRBracket,
     kEnd,
 };
 
@@ -45,6 +47,9 @@ struct QueryNode {
     std::string field;
     QueryCompareOp op = QueryCompareOp::kEq;
     int64_t value = 0;
+    // For an indexed field like `sample[3]`, the element index; -1 for a
+    // plain scalar field.
+    int64_t index = -1;
 
     // kAnd / kOr
     std::unique_ptr<QueryNode> left;
@@ -57,6 +62,9 @@ struct QueryContext {
     uint16_t session_id = 0;
     uint32_t channel = 0;
     int64_t value = 0;
+    // Recent decoded samples, addressable from a query via `sample[i]`.
+    const int64_t* samples = nullptr;
+    size_t sample_count = 0;
 };
 
 bool eval_query(const QueryNode& node, const QueryContext& ctx);

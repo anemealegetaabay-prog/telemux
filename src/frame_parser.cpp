@@ -52,6 +52,9 @@ Result<std::vector<uint8_t>> FrameParser::feed_frame(const uint8_t* data, size_t
     bytes_since_compact_ += payload_length;
     if (bytes_since_compact_ >= config_.recv_arena_compact_threshold_bytes) {
         arena_.compact();
+        // Any partially-assembled message's fragments moved with the store;
+        // bring their recorded offsets forward to match.
+        reassembly_.rebase_after_compact(arena_.last_reclaimed_prefix());
         bytes_since_compact_ = 0;
     }
 

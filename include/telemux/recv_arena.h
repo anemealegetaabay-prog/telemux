@@ -26,10 +26,17 @@ public:
     uint32_t write(const uint8_t* data, uint32_t len, uint16_t session_id);
     void mark_consumed(uint32_t offset);
 
-    // Reclaims space used by consumed segments below the lowest still-live
-    // offset, shrinking storage to exactly what's still needed and
-    // rebasing every entry in active_segments_ by the amount reclaimed.
+    // Reclaims the space held by consumed segments and rebuilds the backing
+    // store around the segments still awaiting delivery, shrinking it to
+    // exactly the bytes they occupy and updating each surviving entry's
+    // offset to its new position in the rebuilt store.
     void compact();
+
+    // How many bytes the most recent compact() reclaimed from the front of
+    // the store -- i.e. the distance the surviving segments slid down toward
+    // offset zero. Holders of absolute offsets into the store consult this
+    // to follow the relocation.
+    uint32_t last_reclaimed_prefix() const { return last_reclaimed_prefix_; }
 
     const uint8_t* data() const { return storage_.data(); }
     size_t size() const { return write_cursor_; }
@@ -38,6 +45,7 @@ private:
     std::vector<uint8_t> storage_;
     size_t write_cursor_ = 0;
     std::vector<SegmentTableEntry> active_segments_;
+    uint32_t last_reclaimed_prefix_ = 0;
 };
 
 }  // namespace telemux

@@ -77,6 +77,16 @@ std::vector<QueryToken> lex_query(const std::string& src) {
             i++;
             continue;
         }
+        if (c == '[') {
+            tokens.push_back({QueryTokenType::kLBracket, "[", 0});
+            i++;
+            continue;
+        }
+        if (c == ']') {
+            tokens.push_back({QueryTokenType::kRBracket, "]", 0});
+            i++;
+            continue;
+        }
         // Unrecognized character: skip it rather than failing the whole lex.
         i++;
     }
