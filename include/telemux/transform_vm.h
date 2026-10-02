@@ -21,6 +21,10 @@ enum class Opcode : uint8_t {
     kReserve = 7,
 };
 
+// Largest record count a single RESERVE may stage (96 KiB of 24-byte
+// records). Larger counts can only come from malformed programs.
+constexpr int32_t kMaxReserveEntries = 4096;
+
 struct VMInstruction {
     Opcode op = Opcode::kFilter;
     int reg_a = 0;

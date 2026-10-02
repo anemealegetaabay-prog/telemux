@@ -142,3 +142,70 @@ TELEMUX_TEST(test_snapshot_zero_extra_allocation) {
     vm.execute(program);
     CHECK(guard.allocation_count() == 0);
 }
+
+namespace {
+// Runs a single RESERVE of `count` entries into register 3, which starts out
+// holding 8 bytes of 0x5A.
+void run_reserve(int32_t count, SampleArena& arena, RegisterFile& regs) {
+    UndoRegisterFile undo;
+    TransformVM vm(arena, regs, undo);
+    uint8_t* p = arena.allocate(8);
+    std::memset(p, 0x5A, 8);
+    regs.set(3, p, 8);
+
+    VMInstruction reserve;
+    reserve.op = Opcode::kReserve;
+    reserve.reg_dst = 3;
+    reserve.param = count;
+    vm.execute({reserve});
+}
+
+bool reg3_untouched(const RegisterFile& regs) {
+    const Register& r = regs.regs[3];
+    if (!r.live || r.len != 8) return false;
+    for (size_t i = 0; i < 8; ++i)
+        if (r.data[i] != 0x5A) return false;
+    return true;
+}
+}  // namespace
+
+TELEMUX_TEST(test_reserve_stages_requested_entries) {
+    SampleArena arena(64);
+    RegisterFile regs;
+    run_reserve(3, arena, regs);
+    const Register& r = regs.regs[3];
+    CHECK(r.live);
+    CHECK(r.len == 3 * 24);
+    // Entry i is 24 bytes filled with i.
+    for (size_t i = 0; i < r.len; ++i) CHECK(r.data[i] == i / 24);
+}
+
+// 0x0AAAAAAB * 24 wraps to 8 in 32-bit arithmetic: the old code allocated an
+// 8-byte staging buffer and wrote ~4 GiB of records into it.
+TELEMUX_TEST(test_reserve_rejects_count_whose_size_overflows_32_bits) {
+    SampleArena arena(64);
+    RegisterFile regs;
+    run_reserve(0x0AAAAAAB, arena, regs);
+    CHECK(reg3_untouched(regs));
+}
+
+TELEMUX_TEST(test_reserve_enforces_max_entry_count) {
+    {
+        SampleArena arena(64);
+        RegisterFile regs;
+        run_reserve(kMaxReserveEntries + 1, arena, regs);
+        CHECK(reg3_untouched(regs));
+    }
+    {
+        SampleArena arena(64);
+        RegisterFile regs;
+        run_reserve(kMaxReserveEntries, arena, regs);
+        CHECK(regs.regs[3].len == static_cast<size_t>(kMaxReserveEntries) * 24);
+    }
+    {
+        SampleArena arena(64);
+        RegisterFile regs;
+        run_reserve(-1, arena, regs);
+        CHECK(reg3_untouched(regs));
+    }
+}

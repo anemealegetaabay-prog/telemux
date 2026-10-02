@@ -1,6 +1,7 @@
 #include "telemux/transform_vm.h"
 
 #include <cstring>
+#include <limits>
 #include <vector>
 
 #include "telemux/transform_ops_filter.h"
@@ -10,7 +11,7 @@ namespace telemux {
 
 namespace {
 // Each RESERVE entry is a fixed-width staging record.
-constexpr uint32_t kReserveEntryStride = 24;
+constexpr size_t kReserveEntryStride = 24;
 }  // namespace
 
 TransformVM::TransformVM(SampleArena& arena, RegisterFile& regs, UndoRegisterFile& undo)
@@ -88,14 +89,21 @@ void TransformVM::execute_repeat_peek(int dst_reg) {
 }
 
 void TransformVM::execute_reserve(int dst_reg, int32_t entry_count) {
-    if (entry_count <= 0) return;
+    // Out-of-range counts are ignored, like other invalid operands.
+    if (entry_count <= 0 || entry_count > kMaxReserveEntries) return;
+
+    // Size the staging buffer in size_t with an explicit overflow check (a
+    // 32-bit product used to wrap, leaving the buffer smaller than the
+    // records written below).
+    const size_t count = static_cast<size_t>(entry_count);
+    if (count > std::numeric_limits<size_t>::max() / kReserveEntryStride) return;
+    const size_t staged_bytes = count * kReserveEntryStride;
 
     // Stage `entry_count` fixed-width records, then hand the packed block to
     // the destination register through the arena.
-    uint32_t staged_bytes = static_cast<uint32_t>(entry_count) * kReserveEntryStride;
     std::vector<uint8_t> staging(staged_bytes);
-    for (int32_t i = 0; i < entry_count; ++i) {
-        uint8_t* entry = staging.data() + static_cast<size_t>(i) * kReserveEntryStride;
+    for (size_t i = 0; i < count; ++i) {
+        uint8_t* entry = staging.data() + i * kReserveEntryStride;
         std::memset(entry, static_cast<int>(i & 0xff), kReserveEntryStride);
     }
 
