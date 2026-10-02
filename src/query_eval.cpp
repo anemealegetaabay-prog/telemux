@@ -30,7 +30,13 @@ bool eval_query(const QueryNode& node, const QueryContext& ctx) {
         case QueryNodeType::kComparison: {
             int64_t lhs;
             if (node.index >= 0 && node.field == "sample") {
-                // Indexed sample lookup, e.g. `sample[3] > 100`.
+                // Indexed sample lookup, e.g. `sample[3] > 100`. An index past
+                // the available samples cannot be evaluated, so the comparison
+                // does not match, like the evaluator's other invalid cases.
+                if (ctx.samples == nullptr ||
+                    static_cast<uint64_t>(node.index) >= ctx.sample_count) {
+                    return false;
+                }
                 lhs = ctx.samples[node.index];
             } else {
                 lhs = field_value(ctx, node.field);
