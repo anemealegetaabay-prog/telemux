@@ -1,5 +1,6 @@
 #include "telemux/transform_ops_plane.h"
 
+#include <cstdint>
 #include <cstring>
 
 #include "telemux/plane_pool.h"
@@ -35,17 +36,26 @@ TransformStatus PlaneResampleOp::apply(PlaneBuffer& plane) {
 }
 
 TransformStatus merge_plane_channels(const PlaneBuffer& a, const PlaneBuffer& b, PlaneBuffer& out) {
-    // A row-sized scratch buffer used to stage each merged row before
-    // it's written into the output plane.
-    size_t row_bytes =
-        static_cast<size_t>(a.layout.width + b.layout.width) * a.layout.bytes_per_sample;
-    uint8_t* row_scratch = allocate_row_scratch(row_bytes);
-
     if (a.layout.height != b.layout.height) {
         // Mismatched channel planes can't be merged row-by-row.
-        delete row_scratch;
         return TransformStatus::kError;
     }
+    if (a.layout.bytes_per_sample != b.layout.bytes_per_sample) {
+        // The merged plane has a single sample size, so planes with
+        // different sample sizes can't share its rows either.
+        return TransformStatus::kError;
+    }
+    // The merged row width and stride must still fit the 32-bit layout.
+    const uint64_t merged_stride =
+        (static_cast<uint64_t>(a.layout.width) + b.layout.width) * a.layout.bytes_per_sample;
+    if (merged_stride > UINT32_MAX) {
+        return TransformStatus::kError;
+    }
+
+    // A row-sized scratch buffer used to stage each merged row before
+    // it's written into the output plane.
+    size_t row_bytes = static_cast<size_t>(merged_stride);
+    uint8_t* row_scratch = allocate_row_scratch(row_bytes);
 
     out.layout.width = a.layout.width + b.layout.width;
     out.layout.height = a.layout.height;
