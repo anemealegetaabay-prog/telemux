@@ -60,7 +60,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 uint16_t delta = static_cast<uint16_t>((data[i] << 8) | data[i + 1]);
                 i += 2;
                 sweeper.advance(delta);
-                sweeper.sweep(dedup, mgr, arena);
+                sweeper.sweep(dedup, mgr);
                 break;
             }
         }

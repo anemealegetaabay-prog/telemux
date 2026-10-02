@@ -2,8 +2,7 @@
 
 namespace telemux {
 
-void IdleSessionSweeper::sweep(RecentSessionDedupCache& dedup, SessionManager& mgr,
-                                SessionBufferArena& arena) {
+void IdleSessionSweeper::sweep(RecentSessionDedupCache& dedup, const SessionManager& mgr) {
     auto& entries = dedup.entries();
     for (auto map_it = entries.begin(); map_it != entries.end();) {
         SessionId id = map_it->first;
@@ -13,9 +12,9 @@ void IdleSessionSweeper::sweep(RecentSessionDedupCache& dedup, SessionManager& m
             if (mgr.has_live_session(id)) {
                 // The session id has already been reused by a new
                 // incarnation, so every closed incarnation still on
-                // record for it is proactively reclaimed rather than
-                // waiting out the rest of its TTL.
-                arena.release(vec_it->buffer_ref);
+                // record for it is dropped now rather than waiting out
+                // the rest of its TTL. (Its session buffer was already
+                // released at close; releasing it here was a double free.)
                 vec_it = incarnations.erase(vec_it);
                 continue;
             }

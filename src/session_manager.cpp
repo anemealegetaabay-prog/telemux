@@ -74,10 +74,10 @@ void SessionManager::close_session(SessionId id, Timestamp now) {
     if (it == sessions_.end()) return;
     SessionRecord& rec = it->second;
 
-    // Hand a snapshot of this session's buffer to the dedup cache first,
-    // so a late retransmission of its final bytes can still be
-    // recognized and dropped rather than misdelivered to whatever session
-    // id comes next.
+    // Let the dedup cache copy this session's final bytes first, so a late
+    // retransmission of them can still be recognized and dropped rather
+    // than misdelivered to whatever session id comes next. The cache keeps
+    // its own copy, so the buffer itself can be released right away.
     dedup_cache_.remember_closed_session(id, rec.recv_buffer, rec.recv_buffer_len, now);
     arena_.release(rec.recv_buffer);
     sessions_.erase(it);

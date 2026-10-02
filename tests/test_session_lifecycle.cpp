@@ -26,7 +26,7 @@ TELEMUX_TEST(test_sweep_after_immediate_session_id_reuse) {
 
     // Sweep runs after the dedup retransmit window has elapsed.
     sweeper.advance(35000);  // past the dedup TTL
-    sweeper.sweep(dedup, mgr, arena);
+    sweeper.sweep(dedup, mgr);
 
     CHECK(true);
 }
@@ -55,7 +55,7 @@ TELEMUX_TEST(test_sweep_after_repeated_close_reopen_churn) {
     mgr.close_session(id, /*now=*/5);
 
     sweeper.advance(35000);  // past the dedup TTL
-    sweeper.sweep(dedup, mgr, arena);
+    sweeper.sweep(dedup, mgr);
 
     CHECK(true);
 }
@@ -136,5 +136,49 @@ TELEMUX_TEST(test_session_zero_length_write) {
     mgr.open_session(9);
     mgr.write_session_data(9, nullptr, 0);
     mgr.close_session(9, /*now=*/0);
+    CHECK(arena.live_buffers() == 0);
+}
+
+// The dedup cache used to keep a pointer to the session buffer that
+// close_session() had just released, so this check read freed memory.
+TELEMUX_TEST(test_dedup_recognizes_retransmit_after_close) {
+    TelemuxConfig config;
+    SessionBufferArena arena;
+    RecentSessionDedupCache dedup(config.dedup_entry_ttl_ms);
+    SessionManager mgr(config, arena, dedup);
+
+    std::vector<uint8_t> payload = {1, 2, 3, 4};
+    mgr.open_session(9);
+    mgr.write_session_data(9, payload.data(), payload.size());
+    mgr.close_session(9, /*now=*/0);
+
+    CHECK(dedup.is_duplicate(9, payload.data(), payload.size()));
+    std::vector<uint8_t> other = {1, 2, 3, 5};
+    CHECK(!dedup.is_duplicate(9, other.data(), other.size()));
+    CHECK(!dedup.is_duplicate(8, payload.data(), payload.size()));
+}
+
+// Sweeping after a closed id is reopened used to release the closed
+// session's buffer a second time (double free).
+TELEMUX_TEST(test_sweep_after_id_reuse_drops_dedup_entries_without_double_free) {
+    TelemuxConfig config;
+    config.dedup_entry_ttl_ms = 30000;
+    SessionBufferArena arena;
+    RecentSessionDedupCache dedup(config.dedup_entry_ttl_ms);
+    SessionManager mgr(config, arena, dedup);
+    IdleSessionSweeper sweeper(/*start_ms=*/0);
+
+    std::vector<uint8_t> payload = {1, 2, 3, 4};
+    mgr.open_session(9);
+    mgr.write_session_data(9, payload.data(), payload.size());
+    mgr.close_session(9, /*now=*/0);
+    mgr.open_session(9);  // id reused within the dedup window
+
+    sweeper.advance(10);
+    sweeper.sweep(dedup, mgr);
+    CHECK(dedup.entries().count(9) == 0);
+    CHECK(!dedup.is_duplicate(9, payload.data(), payload.size()));
+
+    mgr.close_session(9, /*now=*/10);
     CHECK(arena.live_buffers() == 0);
 }
