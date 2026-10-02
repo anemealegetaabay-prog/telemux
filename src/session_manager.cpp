@@ -4,13 +4,27 @@
 
 namespace telemux {
 
-uint8_t* SessionBufferArena::allocate(size_t len) { return new uint8_t[len]; }
+uint8_t* SessionBufferArena::allocate(size_t len) {
+    ++live_buffers_;
+    return new uint8_t[len];
+}
 
-void SessionBufferArena::release(uint8_t* buf) { delete[] buf; }
+void SessionBufferArena::release(uint8_t* buf) {
+    if (buf == nullptr) return;
+    --live_buffers_;
+    delete[] buf;
+}
 
 SessionManager::SessionManager(const TelemuxConfig& config, SessionBufferArena& arena,
                                 RecentSessionDedupCache& dedup_cache)
     : config_(config), arena_(arena), dedup_cache_(dedup_cache) {}
+
+SessionManager::~SessionManager() {
+    // Sessions still open when the manager goes away own their buffers too.
+    for (auto& entry : sessions_) {
+        arena_.release(entry.second.recv_buffer);
+    }
+}
 
 SessionId SessionManager::allocate_session_id() {
     uint32_t space = config_.max_session_id_space();
@@ -29,6 +43,14 @@ SessionId SessionManager::allocate_session_id() {
 }
 
 void SessionManager::open_session(SessionId id) {
+    // Reopening a live id (e.g. after allocate_session_id() wrapped around a
+    // fully live id space) displaces that session, so release its buffer
+    // before the record is replaced.
+    auto it = sessions_.find(id);
+    if (it != sessions_.end()) {
+        arena_.release(it->second.recv_buffer);
+    }
+
     SessionRecord rec;
     rec.id = id;
     rec.state = SessionState::kOpen;
@@ -43,7 +65,7 @@ void SessionManager::write_session_data(SessionId id, const uint8_t* data, size_
         arena_.release(rec.recv_buffer);
     }
     rec.recv_buffer = arena_.allocate(len);
-    std::memcpy(rec.recv_buffer, data, len);
+    if (len > 0) std::memcpy(rec.recv_buffer, data, len);
     rec.recv_buffer_len = len;
 }
 

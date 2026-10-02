@@ -28,12 +28,24 @@ class SessionBufferArena {
 public:
     uint8_t* allocate(size_t len);
     void release(uint8_t* buf);
+
+    // Buffers handed out by allocate() and not yet released.
+    size_t live_buffers() const { return live_buffers_; }
+
+private:
+    size_t live_buffers_ = 0;
 };
 
+// Owns each open session's receive buffer: it is released when the session
+// closes, when its id is reopened, or when the manager is destroyed.
 class SessionManager {
 public:
     SessionManager(const TelemuxConfig& config, SessionBufferArena& arena,
                    RecentSessionDedupCache& dedup_cache);
+    ~SessionManager();
+
+    SessionManager(const SessionManager&) = delete;
+    SessionManager& operator=(const SessionManager&) = delete;
 
     // Wraps within the wire format's session-id space; only checks
     // currently-live sessions, so a recently-closed id can be handed back
